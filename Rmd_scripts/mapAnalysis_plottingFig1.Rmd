@@ -1,0 +1,480 @@
+---
+title: "general map analysis"
+author: "S. Chmielewski"
+date: "30 05 2023"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 3
+---
+
+```{r setup, include=FALSE}
+library(ggplot2)
+library(dplyr)
+library(cowplot)
+library(tidyr)
+library(gridExtra)
+library(stringr)
+
+setwd("~/LM_new_bams/results/16.ordering_after_LA/final_ordering/no_scaling/map_analysis/")
+```
+
+# map analysis
+## load maps
+infMask = 13 is the male map and infMask = 23 is the female map
+```{r load map}
+
+map <- data.frame()
+
+for (infMask in c("13", "23")) {
+  for (chr in 1:7) {
+    if (chr == 4) next
+
+    file_path <- paste0("~/LM_new_bams/results/16.ordering_after_LA/final_ordering/no_scaling/infMask",infMask,"/before_removing_edge_markers/data.Filtering_dataTol0.05_familyInfLimit4_complemented_famInfLim3_MAF0.15_missingLim0.1_MG235rm_infMask", infMask, "_LG", chr, "_physical_named.txt")
+
+        map_i <- read.table(file_path)  
+
+# celect columns based on infMask
+    if (infMask == "13") {
+      map_i <- map_i %>% select(V1, V2, V3)
+    } else if (infMask == "23") {
+      map_i <- map_i %>% select(V1, V2,V4)
+    }
+colnames(map_i) <- c("contig", "position_contig", "position_genetic")
+# modify the data
+    map_i <- map_i %>%
+      mutate(snp_no = row_number(), 
+             LG = paste0("LG",chr), 
+             infMask = infMask)
+
+    map <- rbind(map, map_i)
+  }
+
+  ### load LG8
+  chr = 8 
+  file_path <- paste0("~/LM_new_bams/results/16.ordering_after_LA/final_ordering/no_scaling/infMask", infMask,"/before_removing_edge_markers/data.Filtering_dataTol0.05_familyInfLimit4_complemented_famInfLim3_MAF0.15_missingLim0.1_MG235rm_infMask",infMask,"_LG",chr,"_physical_flattenGeneticDistance_named.txt")
+
+    map_i <- read.table(file_path)  
+
+# select columns based on infMask
+    if (infMask == "13") {
+      map_i <- map_i %>% select(V1, V2, V3)
+    } else if (infMask == "23") {
+      map_i <- map_i %>% select(V1, V2,V4)
+    }
+    
+colnames(map_i) <- c("contig", "position_contig", "position_genetic")
+
+# modify the data
+    map_i <- map_i %>%
+      mutate(snp_no = row_number(), 
+             LG = paste0("LG",chr), 
+             infMask = infMask)
+  map <- rbind(map, map_i)
+}
+
+#### load LG4 (sex chromosome)
+chr = 4
+infMask = 2
+  file_path <- paste0("~/LM_new_bams/results/16.ordering_after_LA/final_ordering/no_scaling/infMask",infMask,"/before_removing_edge_markers/data.Filtering_dataTol0.05_familyInfLimit4_complemented_famInfLim3_MAF0.15_missingLim0.1_MG235rm_infMask",infMask,"_LG",chr,"_physical_named.txt")
+
+    map_i <- read.table(file_path)  
+
+# celect columns based on infMask
+map_i <- map_i %>% select(V1, V2,V4)
+colnames(map_i) <- c("contig", "position_contig", "position_genetic")
+
+# modify the data
+    map_i <- map_i %>%
+      mutate(snp_no = row_number(), 
+             LG = paste0("LG",chr), 
+             infMask = infMask)
+
+  map <- rbind(map, map_i)
+  
+# change physical position to integer
+map$position_contig <- sub('\\*$', '', map$position_contig)
+map$position_contig <- as.numeric(map$position_contig)
+
+```
+
+## assign markers to their physical positions
+```{r assign marker physical position}
+# read the file with columns: order (in relation to snps.txt), position on LG, LG
+marker_position_on_LG <- read.table("~/software/Lep-Anchor/final_LepAnchor_missingLim0.1_MG235rm_infMask123_notScaled/order_allLGs_phys_liftover_named.txt", col.names = c("contig", "position_contig", "position_LG", "chromosome"))
+marker_position_on_LG$position_contig <- sub('\\*$', '', marker_position_on_LG$position_contig)
+marker_position_on_LG$position_contig <- as.numeric(marker_position_on_LG$position_contig)
+marker_position_on_LG$chromosome <- paste0("LG", marker_position_on_LG$chromosome)
+
+# add SNP position on chromosome:
+map <-  map %>%
+  left_join(marker_position_on_LG, by = c("LG" = "chromosome", "position_contig", "contig"))
+
+# rename the chromosomes to match their physical size
+map <- map  %>%
+    mutate(LG = recode(LG,
+                         "LG7" = "chr1",
+                         "LG5" = "chr2",
+                         "LG3" = "chr3",
+                         "LG1" = "chr4",
+                         "LG8" = "chr5",
+                         "LG4" = "chr6",
+                         "LG2" = "chr7",
+                         "LG6" = "chr8")) %>%
+  mutate(LG = factor(LG, levels = c("chr1", "chr2", "chr3", "chr4", "chr5", "chr6", "chr7", "chr8"))) %>% 
+  arrange(LG)
+### load chromosome sizes:
+physical_length_chromosomes <- read.table("~/LM_new_bams/data/genome_res/REF_LA_chr_sizes.txt", col.names = c("LG", "physical_length"))
+
+# rename the chromosomes to match their physical size
+physical_length_chromosomes <- physical_length_chromosomes  %>%
+    mutate(LG = recode(LG,
+                         "LG7" = "chr1",
+                         "LG5" = "chr2",
+                         "LG3" = "chr3",
+                         "LG1" = "chr4",
+                         "LG8" = "chr5",
+                         "LG4" = "chr6",
+                         "LG2" = "chr7",
+                         "LG6" = "chr8")) %>%
+  mutate(LG = factor(LG, levels = c("chr1", "chr2", "chr3", "chr4", "chr5", "chr6", "chr7", "chr8"))) %>% 
+  arrange(LG)
+
+```
+
+## calculate inter-marker distance
+```{r inter-marker distance}
+mean_intermarker_distance_females_cM <-  map %>%
+  filter(infMask != "13") %>%
+      group_by(LG) %>%
+  mutate(position_genetic_lagged = lag(position_genetic, default = 0), 
+         intermarker_distance = position_genetic - position_genetic_lagged) %>%
+    ungroup() %>%
+  summarise(mean_intermarker_distance = mean(intermarker_distance)) %>%
+  pull()
+
+mean_intermarker_distance_males_cM <-  map %>%
+  filter(infMask != "13") %>%
+      group_by(LG) %>%
+  mutate(position_genetic_lagged = lag(position_genetic, default = 0), 
+         intermarker_distance = position_genetic - position_genetic_lagged) %>%
+  ungroup() %>%
+  summarise(mean_intermarker_distance = mean(intermarker_distance)) %>%
+  pull()
+
+paste0("Mean inter-marker distance in female map is ", mean_intermarker_distance_females_cM, " cM, and in male map ", mean_intermarker_distance_males_cM, " cM")
+
+mean_intermarker_distance_females_bp <-  map %>%
+  filter(infMask == "23" | infMask == "2") %>%
+    group_by(LG) %>%
+  mutate(position_physical_lagged = lag(position_LG, default = 0), 
+         intermarker_distance = position_LG - position_physical_lagged) %>%
+    ungroup() %>%
+  summarise(mean_intermarker_distance = mean(intermarker_distance)) %>%
+  pull()
+
+mean_intermarker_distance_males_bp <-  map %>%
+  filter(infMask == "13") %>%
+  group_by(LG) %>%
+  mutate(position_physical_lagged = lag(position_LG, default = 0), 
+         intermarker_distance = position_LG - position_physical_lagged) %>%
+    ungroup() %>%
+  summarise(mean_intermarker_distance = mean(intermarker_distance)) %>%
+  pull()
+
+paste0("Mean inter-marker distance in female map is ", mean_intermarker_distance_females_bp, " bp, and in male map ", mean_intermarker_distance_males_bp, " bp")
+```
+
+## analyse genome assembly
+
+```{r analyse genome assembly}
+# analyse genome assembly
+agp <- read.table("~/software/Lep-Anchor/final_LepAnchor_missingLim0.1_MG235rm_infMask123_notScaled/REF_LA.agp", col.names = c("object", "object_beg", "object_end", "part_number", "component_type", "component_id", "component_beg", "component_end", "orientation"))
+
+# remove gaps from the agp:
+agp <- agp %>%
+  filter(component_type != "U") %>%
+  mutate(component_beg = as.integer(as.character(component_beg)), 
+         component_end = as.integer(as.character(component_end)),
+         component_length = component_end - component_beg + 1)
+
+agp_chromosomes <- agp %>%
+  filter(str_detect(object, "LG"))
+
+paste(nrow(agp_chromosomes), " contigs have been incorporated to the new assembly")
+
+# length of contigs in chromosomes
+length_in_chromosomes <- agp %>%
+  filter(str_detect(object, "LG")) %>%
+  summarise(sum_contig_length = sum(component_length))
+
+paste(round(length_in_chromosomes/1e6,3), " Mb of the contigs have been incorporated to chromosomes")
+
+
+# total length of the summary
+all_contig_sizes <- read.table("~/LM_new_bams/data/genome_res/REF_LA.fa.fai")[,1:2]
+new_assembly_length <- sum(all_contig_sizes$V2)
+
+paste0("New assembly has ", round(new_assembly_length/1e6, 2), " Mb")
+
+### length of haplocontigs
+haplotigs <- read.table("~/software/Lep-Anchor/final_LepAnchor_missingLim0.1_MG235rm_infMask123_notScaled/fullHaplotypes50.txt")[,c(2,4)]
+colnames(haplotigs) <- c("contig", "contig_length")
+haplotigs_length <- sum(haplotigs$contig_length)
+paste0("Purged haplotigs had ", round(haplotigs_length/1e6, 2), " Mb")
+
+### contigs not used 
+not_used_contigs <- read.table("~/software/Lep-Anchor/final_LepAnchor_missingLim0.1_MG235rm_infMask123_notScaled/not_used.agp")[,c(1,3)]
+colnames(not_used_contigs) <- c("contig", "contig_length")
+not_used_length <- sum(not_used_contigs$contig_length)
+paste0("Contigs not used in assembly have ", round(not_used_length/1e6, 2), " Mb")
+
+# rename the chromosomes to match their physical size
+agp <- agp %>%
+  mutate(object = if_else(str_detect(object, "^sq"), 
+                          object, 
+                          recode(object,
+                                 "LG7" = "chr1",
+                                 "LG5" = "chr2",
+                                 "LG3" = "chr3",
+                                 "LG1" = "chr4",
+                                 "LG8" = "chr5",
+                                 "LG4" = "chr6",
+                                 "LG2" = "chr7",
+                                 "LG6" = "chr8")),
+         object = factor(object)) %>%
+  mutate(object = forcats::fct_relevel(object, c("chr1", "chr2", "chr3", "chr4", "chr5", "chr6", "chr7", "chr8"))) %>%
+  arrange(object)
+```
+
+```{r chimeric contigs}
+# check chimeric contig
+map %>% group_by(LG) %>%
+  distinct(contig) %>%
+  group_by(contig) %>%
+  tally(name = "n_chromosomes") %>%
+  arrange(desc(n_chromosomes)) %>%
+  filter(n_chromosomes != 1)
+```
+# plotting
+## plot figure 1A: Marey map
+```{r plotting fig 1A}
+
+general_map_summary <- map %>%
+  mutate(sex = ifelse(infMask == "13", "male", "female")) %>%
+  group_by(sex, LG) %>%
+  select(-infMask) %>%
+  summarise(genetic_length = max(position_genetic), 
+            n_markers = n()) %>%
+  left_join(physical_length_chromosomes, by = "LG") %>%
+  mutate(physical_length = physical_length/1e6,
+         rec_rate = genetic_length/physical_length) %>%
+  pivot_wider(id_cols = "LG", names_from = "sex", values_from = c("genetic_length", "n_markers", "rec_rate", "physical_length")) %>%
+  select(-physical_length_male) %>%
+  mutate(F_M_length_ratio = genetic_length_female/genetic_length_male) %>%
+  rename("physical_length" = "physical_length_female") %>%
+  mutate(across(where(is.numeric), ~ round(., 2)))
+
+# write.table(general_map_summary, "general_map_summary.txt", row.names = FALSE, quote = F)
+cat("Autosomal female map length is ", sum(general_map_summary$genetic_length_female[general_map_summary$LG != "chr6"]), "cM. Male map length is ", sum(general_map_summary$genetic_length_male, na.rm = T), "cM, making it ", round(sum(general_map_summary$genetic_length_female[general_map_summary$LG != "chr6"])/sum(general_map_summary$genetic_length_male, na.rm = T), 2), " times shorter.")
+# write.table(general_map_summary, "general_map_summary.txt", quote = F, row.names = FALSE)
+
+### genome-wide sex-specific recombination rate:
+map_physical_length <- sum(physical_length_chromosomes$physical_length[physical_length_chromosomes$LG != 6])/1e6
+
+male_GW_RR <- sum(general_map_summary$genetic_length_male, na.rm = T)/map_physical_length
+female_GW_RR <- sum(general_map_summary$genetic_length_female[general_map_summary$LG != "chr6"])/map_physical_length
+paste0("Genome-wide recombination rate is ", round(female_GW_RR,2)," and ", round(male_GW_RR,2), " cM/Mb in female and male map, respectively, making female recombination rate ", round(female_GW_RR/male_GW_RR,2), " times higher")
+
+### plot Marey map
+fig_1A <- map %>%
+  mutate(infMask = ifelse(infMask == "13", "male map", "female map"), 
+         LG = as.character(LG),
+         LG = ifelse(LG == "chr6", "chr6 (sex)", LG)) %>%
+ggplot(aes(position_LG/1e6, position_genetic, color = infMask)) +
+geom_rect(data = rectangle_data, inherit.aes = FALSE, 
+            xmin = 23.7, xmax = 28, ymin = 0, ymax = 51, 
+            fill = "lightgrey", alpha = 0.3) +
+  geom_point(size = .8, alpha = .8) +
+  scale_color_manual(values = c("#7ab8d6", "#e0474c")) +
+  facet_wrap(~LG, ncol = 1, strip.position="left") +
+  theme_bw() +
+  theme(plot.tag = element_text(size = 20), 
+        plot.tag.position = c(0.01, 1),
+    legend.position = "none",
+    plot.background = element_rect(fill = "transparent"),
+    legend.title = element_blank(),  
+        #panel.border = element_blank(),  
+    legend.key = element_rect(fill = "transparent", colour = "transparent"),
+    legend.box.background = element_rect(fill = "transparent", colour = "transparent"), 
+    strip.placement = "outside") +
+  labs(tag = "A", x = "physical position [Mb]", y = "genetic position [cM]")
+
+
+plot(fig_1A)
+### plot recombination rate vs. chromosome length:
+recombination_rate_longer <- general_map_summary %>%
+  select(c(LG, physical_length, rec_rate_male, rec_rate_female)) %>%
+  pivot_longer(cols = ends_with("male"), 
+               names_to = "sex", 
+               values_to = "rec_rate", 
+               names_prefix = "rec_rate_")
+```
+
+## plot figure 1B: physical lenght of chromosome VS mean recombination rate
+```{r plot fig 1B}
+fig_1B <- recombination_rate_longer %>%
+    mutate(LG = gsub("chr", "", LG)) %>%
+ggplot(aes(physical_length, rec_rate, color = sex, label = factor(LG))) +
+  geom_point() +
+  #ggrepel::geom_text_repel(size = 5, show.legend = FALSE, fontface = "bold") +
+  ggrepel::geom_text_repel(size = 5, show.legend = FALSE) +
+  geom_smooth(method = "lm", se = F, linewidth = .3) +
+  theme_bw() +
+  theme(legend.position = "none") +
+  #scale_color_viridis(discrete = T) +
+  scale_color_manual(values = c("#408dc4", "#e0474c")) +
+    labs(tag = "B", x = "chromosome size [Mb]", y = "recombination rate\n[cM/Mb]") +
+     theme(plot.tag.position = c(0.01, .95), 
+           plot.tag = element_text(size = 20)) 
+plot(fig_1B)
+# model 1: is recombination rate associated with physical length?
+LM1 <- lm(rec_rate ~ physical_length + sex, data = recombination_rate_longer)
+summary(LM1)
+
+  # exclude chromosome 1
+LM1 <- lm(rec_rate ~ physical_length + sex, data = recombination_rate_longer[recombination_rate_longer$LG != "chr1",])
+
+### genetic vs. physical length:
+phys_gen_length_longer <- general_map_summary %>%
+  select(c(LG, physical_length, genetic_length_female, genetic_length_male)) %>%
+  pivot_longer(cols = ends_with("male"), 
+               names_to = "sex", 
+               values_to = "genetic_length", 
+               names_prefix = "genetic_length_")
+```
+
+## plot figure 1B: chromosome size VS map length
+```{r plot figure 1C}
+# Fig. 1C: chromosome size VS map length
+fig_1C <- map %>%
+  mutate(sex = ifelse(infMask == "13", "male", "female")) %>% 
+  group_by(sex, LG) %>%
+  summarise(genetic_length = max(position_genetic)) %>%
+  left_join(physical_length_chromosomes, by = "LG") %>%
+  mutate(physical_length = physical_length/1000000, 
+         sex = ifelse(str_detect(sex, "male"), paste0(sex, " map"), sex)) %>%
+  mutate(LG = gsub("chr", "", LG)) %>%
+  ggplot(aes(y = genetic_length, x = physical_length, color = sex)) +
+  geom_smooth(method = "lm", se = F, linewidth = .3) +
+  ggrepel::geom_text_repel(aes(label = LG), size = 5, show.legend = FALSE) +
+  geom_point(alpha = .8) +
+  theme_bw() +
+  labs(x = "chromosome size [Mb]", y = "genetic length \n[cM]" , color=NULL, text = NULL) +
+  scale_color_manual(values = c("#408dc4", "#e0474c")) +
+  scale_fill_manual(values = c("#408dc4", "#e0474c"))+
+  labs(tag = "C") +
+     theme(plot.tag.position = c(0.01, .95), 
+           plot.tag = element_text(size = 20), 
+           legend.box = "horizontal", 
+           legend.direction = "horizontal",
+           legend.title = element_blank()) +
+  lims(y = c(4,55)) 
+
+### is map length of associated with the physical size of the chromosome? 
+LM2 <- lm(genetic_length ~ physical_length + sex, data = phys_gen_length_longer)
+summary(LM2)
+
+```
+
+## plot figure 1D. male VS female map length
+
+```{r plot fig 1D}
+fig_1D <- map %>%
+  mutate(sex = ifelse(infMask == "13", "male", "female")) %>%
+  group_by(sex, LG) %>%
+  summarise(genetic_length = max(position_genetic)) %>%
+  pivot_wider(id_cols = LG, 
+              names_from = sex, 
+              values_from = genetic_length) %>%
+  filter(LG != 6) %>%
+  mutate(LG = gsub("chr", "", LG)) %>%
+  ggplot(aes(male, female, label = factor(LG))) +
+  geom_smooth(method = "lm", se = F, color = "black", linewidth = 0.3, fullrange=TRUE) +
+  geom_point(alpha = .8, size = 1.2) +
+  ggrepel::geom_text_repel(size = 5, show.legend = FALSE) +
+  lims(x = c(0,30), y = c(0,50)) +
+  geom_abline(linetype = "dashed") +
+  theme_bw()+
+  labs(tag = "D", x = "male map lengh [cM]", y = "female map lengh\n[cM]") +
+     theme(plot.tag = element_text(size = 20),
+           plot.tag.position = c(0.01, .95))
+
+### LM: male VS female map length
+LM3 <- lm(genetic_length_female ~ genetic_length_male, data = general_map_summary)
+summary(LM3)
+
+# get a common legend for fig. 1
+common_legend <- get_legend(fig_1C)
+fig_1C <- fig_1C +
+    theme(legend.position = "none") 
+
+# arrange plots 1B-1D 
+right_column_plots <- grid.arrange(
+  fig_1B,
+  fig_1C,
+  fig_1D,
+  ncol = 1, 
+  heights = c(1, 1, 1), 
+  layout_matrix = rbind(1, 2, 3) 
+)
+
+# arrange the marey_plot with the common legend
+left_plot_with_legend <- arrangeGrob(
+  common_legend,
+  fig_1A,
+  ncol = 1,
+  heights = c(0.5, 10)
+)
+
+# arrange all fig. 1 plots together
+grid.arrange(
+  left_plot_with_legend,
+  right_column_plots,
+  ncol = 2,
+  widths = c(3, 2) 
+)
+```
+
+## plot association between male and female recombination rate in 1 Mb windows
+
+```{r RR correlation between sexes in 1Mb windows}
+RR <- read.table("~/LM_new_bams/results/16.ordering_after_LA/final_ordering/no_scaling/map_analysis/marey_map/recRate_GeneDensity_RepeatDensity.txt", h = T)[1:5]
+
+RR_autosomes_wider <- RR %>%
+pivot_wider(id_cols = c("LG", "window_start"), 
+              names_from = "infMask", 
+            values_from = "rec_rate")
+
+RR_autosomes_wider %>%
+  filter(LG != "chr6") %>%
+ggplot(aes(`male map`, `female map`)) +
+  geom_point(size = 1.5, alpha = .5) +
+  geom_smooth(method = "lm", se = F, linewidth = 0.3) +
+  labs(x = "female recombination rate [cM/Mb]", y = "male recombination rate [cM/Mb]") +
+  theme(text = element_text(size = 15)) +
+  facet_wrap(~LG, scales = "free", nrow = 2, ncol = 4) +
+  geom_abline(linetype = "dashed", size = .5) 
+
+cor.test(RR_autosomes_wider$`male map`, RR_autosomes_wider$`female map`)
+```
+```{r save files to be uploaded to GitHub}
+write.table(map[,c(5,7,3,6)], "~/LM_new_bams/results/16.ordering_after_LA/final_ordering/no_scaling/map_analysis/filesToUploadGitHub/Rhrob_map.txt", quote = F, row.names = F, sep = "\t")
+
+write.table(physical_length_chromosomes, "~/LM_new_bams/results/16.ordering_after_LA/final_ordering/no_scaling/map_analysis/filesToUploadGitHub/chromosome_lengths.txt", quote = F, row.names = F, sep = "\t")
+
+write.table(agp, "~/LM_new_bams/results/16.ordering_after_LA/final_ordering/no_scaling/map_analysis/filesToUploadGitHub/Rhrob.agp", quote = F, row.names = F, sep = "\t")
+
+```
+

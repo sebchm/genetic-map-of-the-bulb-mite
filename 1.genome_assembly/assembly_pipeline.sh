@@ -152,7 +152,6 @@ medaka_consensus -i ${READS} -d ${DRAFT_GENOME} -o "${RACON_DIR}/medaka_output" 
 #== 7) PURGEDUPS ======
 #======================
   echo Running purgeDups at `date`
-conda activate rr_map_env
 ASSEMBLY_NAME=IW24_minLen5kb_minQ10_contaminantsRemoved_polished
 mkdir -p ${PURGE_DIR}/${ASSEMBLY_NAME} && cd ${PURGE_DIR}/${ASSEMBLY_NAME}
 mv ${PILON_BASE}/pilon_round3/pilon_round3.fasta ${PILON_BASE}/pilon_round3/${ASSEMBLY_NAME}.fasta # rename pilon output

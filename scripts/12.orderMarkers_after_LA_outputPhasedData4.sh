@@ -1,6 +1,5 @@
 #! /bin/bash
 
-#### MASTER SCRIPT FOR ORDERING AFTER ANCHORING
 # OUTPUT PHASED DATA4
 
 LM=$(echo java -cp ~/software/Lep_Map3_0.51/bin)

@@ -9,37 +9,37 @@ set -o pipefail
 #=======================================================================================================================================
 #== 1. trim the Illumina reads, map them to the genome, mark duplicates, remove ambigously mapping reads and run QC with qualimap ======
 #=======================================================================================================================================
-while read r1 r2 r3 ; do source 1.rr_map_removeDuplicates.sh ${r1} ${r2} ${r3} ; done < ~/LM_new_genome/data/sample_name_R1_R2_usedForMapping.txt
+while read r1 r2 r3 ; do source 01.rr_map_removeDuplicates.sh ${r1} ${r2} ${r3} ; done < ~/LM_new_genome/data/sample_name_R1_R2_usedForMapping.txt
 
 #==========================================================
 #== 2. calculate stats for each sample after mapping ======
 #==========================================================
-bash 2.calculate_stats_for_each_sample_after_mapping.sh
+bash 02.calculate_stats_for_each_sample_after_mapping.sh
 
 #===========================================
 #== 3. calculate genotype likelihoods ======
 #===========================================
-bash 3.calculate_genotype_likelihoods.sh
+bash 03.calculate_genotype_likelihoods.sh
 
 #========================
 #== 4. run ParentCall2 ==
 #========================
-bash 4.ParentCall2.sh
+bash 04.ParentCall2.sh
 
 #========================
 #== 5. run Filtering 2 ==
 #========================
-bash 5.Filtering2.sh
+bash 05.Filtering2.sh
 
 #============================
 #== 6. remove repeats =======
 #============================
-bash 6.removeRepeats.sh
+bash 06.removeRepeats.sh
 
 #===============================================
 #== 7. prepare post file without repeats ==
 #===============================================
-bash 7.removeRepeats_from_postGL_file.sh
+bash 07.removeRepeats_from_postGL_file.sh
 
 #====================================
 #== 8. SeparateChromosomes (slurm) ==

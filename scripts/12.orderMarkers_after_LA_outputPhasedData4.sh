@@ -47,14 +47,15 @@ for CHR in 1 2 3 4 5 6 8
         ${RESULTS_DIR}/${MAP_NAME}_infMask${INFMASK}_LG${CHR}_physical_named.txt
                 done
 
-        #################
-        ### INFMASK23 ###
-        #################
 
-INFMASK=23
+        #############################
+        ### INFMASK13 & INFMASK23 ###
+        #############################
+for INFMASK in 13 23
+        do
 RESULTS_DIR=~/LM_new_genome/results/10.OM2_after_LA/${MAP_NAME}_lodSC21/infMask${INFMASK}
 mkdir -p ${RESULTS_DIR}/intervals
-for CHR in 1 2 3 4 5 8
+for CHR in 1 2 3 4 5 6 8
           do
 echo "gunzip -c ${DATA} | ${LM}  OrderMarkers2 data=- map=${MAP} useMorgan=1 chromosome=${CHR} numThreads=40 \
         outputPhasedData=4 \
@@ -69,86 +70,14 @@ echo "gunzip -c ${DATA} | ${LM}  OrderMarkers2 data=- map=${MAP} useMorgan=1 chr
         done|parallel --jobs 30
 
 # name the markers
-for CHR in 1 2 3 4 5 8
+for CHR in 1 2 3 4 5 6 8
                 do
         awk -vFS="\t" -vOFS="\t" '(NR==FNR){s[NR-1]=$0}(NR!=FNR){if ($1 in s) $1=s[$1];print}' ${SNP_FILE} \
         ${RESULTS_DIR}/${MAP_NAME}_infMask${INFMASK}_LG${CHR}_physical.txt > \
         ${RESULTS_DIR}/${MAP_NAME}_infMask${INFMASK}_LG${CHR}_physical_named.txt
                 done
 
-# special care for LGs 6
-CHR=6
-gunzip -c ${DATA} | ${LM}  OrderMarkers2 data=- map=${MAP} useMorgan=1 chromosome=${CHR} numThreads=40 \
-        outputPhasedData=4 \
-        numMergeIterations=40 \
-        grandparentPhase=1 \
-        improveOrder=0 \
-        proximityScale=100 \
-        informativeMask=${INFMASK} \
-        evaluateOrder=${PHYS_FILE_DIR}/order${CHR}.phys \
-        calculateIntervals=${RESULTS_DIR}/intervals/${MAP_NAME}_infMask${INFMASK}_LG${CHR}_proximityScale100_int_physical \
-        > ${RESULTS_DIR}/${MAP_NAME}_infMask${INFMASK}_LG${CHR}_proximityScale100_physical.txt \
-        2> ${RESULTS_DIR}/${MAP_NAME}_infMask${INFMASK}_LG${CHR}_proximityScale100_physical_log.txt
-
-# name the markers
-
-        awk -vFS="\t" -vOFS="\t" '(NR==FNR){s[NR-1]=$0}(NR!=FNR){if ($1 in s) $1=s[$1];print}' ${SNP_FILE} \
-        ${RESULTS_DIR}/${MAP_NAME}_infMask${INFMASK}_LG${CHR}_proximityScale100_physical.txt > \
-        ${RESULTS_DIR}/${MAP_NAME}_infMask${INFMASK}_LG${CHR}_proximityScale100_physical_named.txt
-
-        #################
-        ### INFMASK13 ###
-        #################
-
-INFMASK=13
-RESULTS_DIR=~/LM_new_genome/results/10.OM2_after_LA/${MAP_NAME}_lodSC21/infMask${INFMASK}
-mkdir -p ${RESULTS_DIR}/intervals
-for CHR in 1 2 3 4 8
-          do
-echo "gunzip -c ${DATA} | ${LM}  OrderMarkers2 data=- map=${MAP} useMorgan=1 chromosome=${CHR} numThreads=40 \
-        outputPhasedData=4 \
-        numMergeIterations=40 \
-        grandparentPhase=1 \
-        improveOrder=0 \
-        informativeMask=${INFMASK} \
-        evaluateOrder=${PHYS_FILE_DIR}/order${CHR}.phys \
-        calculateIntervals=${RESULTS_DIR}/intervals/${MAP_NAME}_infMask${INFMASK}_LG${CHR}_int_physical \
-        > ${RESULTS_DIR}/${MAP_NAME}_infMask${INFMASK}_LG${CHR}_physical.txt \
-        2> ${RESULTS_DIR}/${MAP_NAME}_infMask${INFMASK}_LG${CHR}_physical_log.txt"
-        done|parallel --jobs 30
-
-# name the markers
-for CHR in 1 2 3 4 8
-                do
-        awk -vFS="\t" -vOFS="\t" '(NR==FNR){s[NR-1]=$0}(NR!=FNR){if ($1 in s) $1=s[$1];print}' ${SNP_FILE} \
-        ${RESULTS_DIR}/${MAP_NAME}_infMask${INFMASK}_LG${CHR}_physical.txt > \
-        ${RESULTS_DIR}/${MAP_NAME}_infMask${INFMASK}_LG${CHR}_physical_named.txt
-                done
-
-# special care for LGs 6 and 8
-for CHR in 5 6
-        do
-echo "gunzip -c ${DATA} | ${LM}  OrderMarkers2 data=- map=${MAP} useMorgan=1 chromosome=${CHR} numThreads=40 \
-        outputPhasedData=4 \
-        numMergeIterations=40 \
-        grandparentPhase=1 \
-        improveOrder=0 \
-        proximityScale=100 \
-        informativeMask=${INFMASK} \
-        evaluateOrder=${PHYS_FILE_DIR}/order${CHR}.phys \
-        calculateIntervals=${RESULTS_DIR}/intervals/${MAP_NAME}_infMask${INFMASK}_LG${CHR}_proximityScale100_int_physical \
-        > ${RESULTS_DIR}/${MAP_NAME}_infMask${INFMASK}_LG${CHR}_proximityScale100_physical.txt \
-        2> ${RESULTS_DIR}/${MAP_NAME}_infMask${INFMASK}_LG${CHR}_proximityScale100_physical_log.txt"
-        done|parallel --jobs 30
-
-# name the markers
-for CHR in 5 6
-        do
-        awk -vFS="\t" -vOFS="\t" '(NR==FNR){s[NR-1]=$0}(NR!=FNR){if ($1 in s) $1=s[$1];print}' ${SNP_FILE} \
-        ${RESULTS_DIR}/${MAP_NAME}_infMask${INFMASK}_LG${CHR}_proximityScale100_physical.txt > \
-        ${RESULTS_DIR}/${MAP_NAME}_infMask${INFMASK}_LG${CHR}_proximityScale100_physical_named.txt
         done
-
 
 ################################################
 #### LG7: sex chromosome. InfMask=2 only #####
@@ -183,30 +112,19 @@ gunzip -c ${DATA} | ${LM}  OrderMarkers2 data=- map=${MAP} useMorgan=1 chromosom
 cd ~/LM_new_genome/results/10.OM2_after_LA/${MAP_NAME}_lodSC21
 rm -f summary_all_maps.txt
 
-INFMASK=23
-
-      for CHR in 1 2 3 4 5 8
+for INFMASK in 123 23
+        do
+      for CHR in 1 2 3 4 5 6 8
                 do
         tail -n+4 infMask${INFMASK}/${MAP_NAME}_infMask${INFMASK}_LG${CHR}_physical_named.txt |  \
         cut -f1,2,4 | sed -e "s/$/\t${CHR}\tInfMask${INFMASK}/" >> ~/LM_new_genome/results/10.OM2_after_LA/${MAP_NAME}_lodSC21/summary_all_maps.txt
                 done
 
-CHR=6
-        tail -n+4 infMask${INFMASK}/${MAP_NAME}_infMask${INFMASK}_LG${CHR}_proximityScale100_physical_named.txt |  \
-        cut -f1,2,4 | sed -e "s/$/\t${CHR}\tInfMask${INFMASK}/" >> ~/LM_new_genome/results/10.OM2_after_LA/${MAP_NAME}_lodSC21/summary_all_maps.txt
-
-
-
+done
 INFMASK=13
-      for CHR in 1 2 3 4 8
+      for CHR in 1 2 3 4 5 6 8
                 do
         tail -n+4 infMask${INFMASK}/${MAP_NAME}_infMask${INFMASK}_LG${CHR}_physical_named.txt |  \
-        cut -f1,2,3 | sed -e "s/$/\t${CHR}\tInfMask${INFMASK}/" >> ~/LM_new_genome/results/10.OM2_after_LA/${MAP_NAME}_lodSC21/summary_all_maps.txt
-                done
-
-      for CHR in 5 6
-                do
-        tail -n+4 infMask${INFMASK}/${MAP_NAME}_infMask${INFMASK}_LG${CHR}_proximityScale100_physical_named.txt |  \
         cut -f1,2,3 | sed -e "s/$/\t${CHR}\tInfMask${INFMASK}/" >> ~/LM_new_genome/results/10.OM2_after_LA/${MAP_NAME}_lodSC21/summary_all_maps.txt
                 done
         
